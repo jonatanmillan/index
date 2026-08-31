@@ -763,46 +763,103 @@ function updateTopTeams(data) {
   });
 }
 
-// ── TABLE ─────────────────────────────────────────
+// ── TABLE CON DEBOUNCE + PAGINACIÓN ───────────────
+const PAGE_SIZE = 50;  // filas visibles a la vez
+let currentPage = 0;
+let filteredCache = [];
+let searchTimer = null;
+
+// Debounce — espera 220ms después de que el usuario deja de escribir
 function applyFilters() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(_doFilter, 220);
+}
+
+function _doFilter() {
   const search = (document.getElementById('searchInput').value||'').toLowerCase();
   const status = document.getElementById('statusFilter').value;
   const metodo = document.getElementById('metodoFilter').value;
   const base   = currentSede === 'all' ? allData : allData.filter(r=>r.sede===currentSede);
-  const filtered = base.filter(r => {
+
+  filteredCache = base.filter(r => {
     const ms = !search || r.equipo.toLowerCase().includes(search) || r.capitan.toLowerCase().includes(search);
     const me = status === 'all' || r.estado === status;
     const mm = metodo === 'all' || r.metodo === metodo;
     return ms && me && mm;
   });
-  renderTable(filtered);
+
+  currentPage = 0;
+  renderTable();
 }
 
-function renderTable(data) {
-  const tbody = document.getElementById('tableBody');
-  // Usar fragment para no bloquear el DOM
+function renderTable() {
+  const tbody  = document.getElementById('tableBody');
+  const total  = filteredCache.length;
+  const start  = currentPage * PAGE_SIZE;
+  const end    = Math.min(start + PAGE_SIZE, total);
+  const page   = filteredCache.slice(start, end);
+  const mc     = { EFECTIVO:'efec', TRANSFERENCIA:'trans', MIXTO:'mixto' };
+
+  // Contador
+  document.getElementById('tableCount').textContent =
+    `${total} registros · mostrando ${start+1}–${end}`;
+
+  // Fragment — inserta todo de un golpe, sin reflow intermedio
   const fragment = document.createDocumentFragment();
-  document.getElementById('tableCount').textContent = `${data.length} registros`;
-  const mc = { EFECTIVO:'efec', TRANSFERENCIA:'trans', MIXTO:'mixto' };
-  data.forEach((r,i) => {
+  page.forEach((r,i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="color:var(--text-muted)">${i+1}</td>
-      <td><strong>${r.equipo||'—'}</strong></td>
-      <td style="color:var(--text-muted);font-size:10px">${r.capitan||'—'}</td>
-      <td style="font-size:10px">${r.sede.replace(/ F[78].*/,'')}</td>
-      <td><strong style="color:var(--green)">${r.total>0?fmt(r.total):'—'}</strong></td>
-      <td style="color:var(--green)">${r.inscripcion>0?fmt(r.inscripcion):'—'}</td>
-      <td style="color:var(--blue)">${r.conFecha>0?fmt(r.conFecha):'—'}</td>
-      <td style="color:var(--yellow)">${r.tarjetas>0?fmt(r.tarjetas):'—'}</td>
-      <td style="color:var(--purple)">${r.wos>0?fmt(r.wos):'—'}</td>
-      <td style="color:var(--red)">${r.otros>0?fmt(r.otros):'—'}</td>
-      <td>${r.metodo?`<span class="tag ${mc[r.metodo]||''}">${r.metodo}</span>`:'—'}</td>
-      <td><span class="tag ${r.estado==='Paga'?'paga':'no-paga'}">${r.estado==='Paga'?'✅ Paga':'❌ Pendiente'}</span></td>`;
+    tr.innerHTML =
+      `<td style="color:var(--text-muted)">${start+i+1}</td>
+       <td><strong>${r.equipo||'—'}</strong></td>
+       <td style="color:var(--text-muted);font-size:10px">${r.capitan||'—'}</td>
+       <td style="font-size:10px">${r.sede.replace(/ F[78].*/,'')}</td>
+       <td><strong style="color:var(--green)">${r.total>0?fmt(r.total):'—'}</strong></td>
+       <td style="color:var(--green)">${r.inscripcion>0?fmt(r.inscripcion):'—'}</td>
+       <td style="color:var(--blue)">${r.conFecha>0?fmt(r.conFecha):'—'}</td>
+       <td style="color:var(--yellow)">${r.tarjetas>0?fmt(r.tarjetas):'—'}</td>
+       <td style="color:var(--purple)">${r.wos>0?fmt(r.wos):'—'}</td>
+       <td style="color:var(--red)">${r.otros>0?fmt(r.otros):'—'}</td>
+       <td>${r.metodo?`<span class="tag ${mc[r.metodo]||''}">${r.metodo}</span>`:'—'}</td>
+       <td><span class="tag ${r.estado==='Paga'?'paga':'no-paga'}">${r.estado==='Paga'?'✅ Paga':'❌ Pendiente'}</span></td>`;
     fragment.appendChild(tr);
   });
   tbody.innerHTML = '';
   tbody.appendChild(fragment);
+
+  // Paginación
+  renderPagination(total);
+}
+
+function renderPagination(total) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  let pag = document.getElementById('pagination');
+  if (!pag) {
+    pag = document.createElement('div');
+    pag.id = 'pagination';
+    pag.style.cssText = 'display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap';
+    document.querySelector('.table-wrap').after(pag);
+  }
+  if (pages <= 1) { pag.innerHTML = ''; return; }
+
+  let html = `<span style="font-size:11px;color:var(--text-muted)">Página:</span>`;
+  for (let i = 0; i < pages; i++) {
+    const active = i === currentPage;
+    html += `<button onclick="goPage(${i})" style="
+      background:${active?'var(--green)':'var(--surface2)'};
+      color:${active?'#000':'var(--text-muted)'};
+      border:1px solid ${active?'var(--green)':'var(--border)'};
+      padding:3px 9px;border-radius:6px;font-size:11px;
+      cursor:pointer;font-family:Inter,sans-serif;font-weight:${active?'700':'400'}">
+      ${i+1}</button>`;
+  }
+  pag.innerHTML = html;
+}
+
+function goPage(n) {
+  currentPage = n;
+  renderTable();
+  // Scroll suave al inicio de la tabla
+  document.querySelector('.table-wrap').scrollTo({ top:0, behavior:'smooth' });
 }
 
 Chart.defaults.color = '#6b7a96';
