@@ -238,8 +238,13 @@
   </header>
 
   <div class="filters">
-    <span class="filter-label">Sede:</span>
-    <button class="filter-btn active" onclick="filterSede('all',this)">Todas</button>
+    <span class="filter-label">CIUDAD:</span>
+    <button class="filter-btn active" onclick="filterCiudad('all',this)">Todas</button>
+    <div id="ciudadFilters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+  <div class="filters" style="padding-top:8px;border-top:none">
+    <span class="filter-label">SEDE:</span>
+    <button class="filter-btn active" id="btnTodasSedes" onclick="filterSede('all',this)">Todas</button>
     <div id="sedeFilters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   </div>
 
@@ -362,6 +367,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzNiMjd9uhGw8E5FMVF
 
 let allData = [];
 let currentSede = 'all';
+let currentCiudad = 'all';
 let charts = {};
 
 // ── LOGIN ────────────────────────────────────────
@@ -482,10 +488,30 @@ function splitCSV(line) {
 }
 
 // ── SEDE FILTERS ──────────────────────────────────
-function buildSedeFilters() {
-  const sedes = [...new Set(allData.map(r => r.sede).filter(Boolean))].sort();
+function buildFilters() {
+  // Ciudades
+  const ciudades = [...new Set(allData.map(r => r.ciudad).filter(Boolean))].sort();
+  const cc = document.getElementById('ciudadFilters');
+  cc.innerHTML = '';
+  ciudades.forEach(ciudad => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.textContent = ciudad;
+    btn.onclick = () => filterCiudad(ciudad, btn);
+    cc.appendChild(btn);
+  });
+
+  // Sedes (todas al inicio)
+  buildSedeFilters(allData);
+}
+
+function buildSedeFilters(data) {
+  const sedes = [...new Set(data.map(r => r.sede).filter(Boolean))].sort();
   const container = document.getElementById('sedeFilters');
   container.innerHTML = '';
+  // Reset sede cuando cambia ciudad
+  currentSede = 'all';
+  document.getElementById('btnTodasSedes').classList.add('active');
   sedes.forEach(sede => {
     const btn = document.createElement('button');
     btn.className = 'filter-btn';
@@ -495,16 +521,33 @@ function buildSedeFilters() {
   });
 }
 
-function filterSede(sede, btn) {
-  currentSede = sede;
+function filterCiudad(ciudad, btn) {
+  currentCiudad = ciudad;
+  currentSede = 'all';
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  // Usar requestAnimationFrame para no bloquear el hilo principal
+  document.getElementById('btnTodasSedes').classList.add('active');
   requestAnimationFrame(() => {
-    const filtered = sede === 'all' ? allData : allData.filter(r => r.sede === sede);
+    const byCiudad = ciudad === 'all' ? allData : allData.filter(r => r.ciudad === ciudad);
+    buildSedeFilters(byCiudad);
+    updateKPIs(byCiudad);
+    updateTopTeams(byCiudad);
+    updateChartData(byCiudad);
+    applyFilters();
+  });
+}
+
+function filterSede(sede, btn) {
+  currentSede = sede;
+  // Solo desactiva botones de sede
+  document.getElementById('btnTodasSedes').classList.remove('active');
+  document.querySelectorAll('#sedeFilters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  requestAnimationFrame(() => {
+    const byCiudad = currentCiudad === 'all' ? allData : allData.filter(r => r.ciudad === currentCiudad);
+    const filtered = sede === 'all' ? byCiudad : byCiudad.filter(r => r.sede === sede);
     updateKPIs(filtered);
     updateTopTeams(filtered);
-    // Actualizar gráficos sin destruirlos — solo cambian los datos
     updateChartData(filtered);
     applyFilters();
   });
@@ -775,7 +818,12 @@ function _doFilter() {
   const search = (document.getElementById('searchInput').value||'').toLowerCase();
   const status = document.getElementById('statusFilter').value;
   const metodo = document.getElementById('metodoFilter').value;
-  const base   = currentSede === 'all' ? allData : allData.filter(r=>r.sede===currentSede);
+
+  // Respeta ciudad → sede → búsqueda
+  let base = allData;
+  if (currentCiudad !== 'all') base = base.filter(r => r.ciudad === currentCiudad);
+  if (currentSede   !== 'all') base = base.filter(r => r.sede   === currentSede);
+
   const filtered = base.filter(r => {
     const ms = !search || r.equipo.toLowerCase().includes(search) || r.capitan.toLowerCase().includes(search);
     const me = status === 'all' || r.estado === status;
