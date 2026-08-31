@@ -352,8 +352,12 @@
 // ════════════════════════════════════════════════
 // CONFIGURACIÓN — solo cambia estas 2 líneas
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// ÚNICA configuración necesaria en el HTML
+// La contraseña vive en el Apps Script — no aquí
+// ════════════════════════════════════════════════
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzNiMjd9uhGw8E5FMVFXYlp7wmXx3W5Q8AVN6CO77OhaQIE_pLuOmg2C-yR4o9AUwTMw/exec";
-const PASSWORD = "f8bogota2024";   // ← cambia esto por tu contraseña
+// ════════════════════════════════════════════════
 // ════════════════════════════════════════════════
 
 let allData = [];
@@ -362,18 +366,18 @@ let charts = {};
 
 // ── LOGIN ────────────────────────────────────────
 function doLogin() {
-  const val = document.getElementById('passInput').value;
+  const val = document.getElementById('passInput').value.trim();
   const err = document.getElementById('loginError');
-  if (val === PASSWORD) {
-    err.style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('loadingScreen').style.display = 'flex';
-    loadData();
-  } else {
+  if (!val) {
     err.style.display = 'block';
-    document.getElementById('passInput').value = '';
-    document.getElementById('passInput').focus();
+    err.textContent = '❌ Ingresa una contraseña.';
+    return;
   }
+  // No verificamos la clave aquí — la verifica el Apps Script
+  err.style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'flex';
+  loadData(val);  // enviamos la clave al Script para que él decida
 }
 function doLogout() {
   document.getElementById('dashboard').style.display = 'none';
@@ -382,17 +386,22 @@ function doLogout() {
 }
 
 // ── LOAD CSV ─────────────────────────────────────
-function loadData() {
-  // Llama al Apps Script con la contraseña para obtener los datos
-  const url = SCRIPT_URL + '?pass=' + encodeURIComponent(PASSWORD);
+function loadData(password) {
+  // Envía la clave al Apps Script — él decide si es correcta
+  const url = SCRIPT_URL + '?pass=' + encodeURIComponent(password);
   fetch(url)
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(json => {
       // Si el Script responde "unauthorized" vuelve al login
       if (json.error === 'unauthorized') {
-        doLogout();
-        document.getElementById('loginError').textContent = '❌ Acceso denegado por el servidor.';
-        document.getElementById('loginError').style.display = 'block';
+        // Contraseña incorrecta — el Script lo rechazó
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+        const err = document.getElementById('loginError');
+        err.textContent = '❌ Contraseña incorrecta. Intenta de nuevo.';
+        err.style.display = 'block';
+        document.getElementById('passInput').value = '';
+        document.getElementById('passInput').focus();
         return;
       }
       if (json.error) throw new Error(json.error + ': ' + (json.msg||''));
@@ -490,22 +499,44 @@ function filterSede(sede, btn) {
   currentSede = sede;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const filtered = sede === 'all' ? allData : allData.filter(r => r.sede === sede);
-  renderAll(filtered);
+  // Usar requestAnimationFrame para no bloquear el hilo principal
+  requestAnimationFrame(() => {
+    const filtered = sede === 'all' ? allData : allData.filter(r => r.sede === sede);
+    updateKPIs(filtered);
+    updateTopTeams(filtered);
+    // Actualizar gráficos sin destruirlos — solo cambian los datos
+    updateChartData(filtered);
+    applyFilters();
+  });
 }
 
 // ── HELPERS ───────────────────────────────────────
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
 const pct = (a,b) => b > 0 ? Math.round(a/b*100) : 0;
-const destroyChart = id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } };
 
-// ── RENDER ALL ────────────────────────────────────
+// Crea un chart solo si no existe — si existe solo actualiza datos
+function getOrCreateChart(id, config) {
+  if (charts[id]) {
+    // Actualiza datos sin destruir el chart
+    const c = charts[id];
+    config.data.datasets.forEach((ds, i) => {
+      if (c.data.datasets[i]) {
+        c.data.datasets[i].data = ds.data;
+        if (ds.backgroundColor) c.data.datasets[i].backgroundColor = ds.backgroundColor;
+      }
+    });
+    c.data.labels = config.data.labels;
+    c.update('active');
+    return c;
+  }
+  charts[id] = new Chart(document.getElementById(id), config);
+  return charts[id];
+}
+
+// ── RENDER ALL (primera carga) ────────────────────
 function renderAll(data) {
   updateKPIs(data);
-  updateSedeChart(data);
-  updateMetodoChart(data);
-  updateConceptoChart(data);   // ← NUEVA
-  updateEfTransChart(data);
+  initCharts(data);   // solo en la primera carga
   updateTopTeams(data);
   applyFilters();
 }
@@ -518,134 +549,41 @@ function updateKPIs(data) {
   const pagan         = data.filter(r => r.estado === 'Paga').length;
   const noPagan       = data.filter(r => r.estado === 'No paga').length;
 
-  document.getElementById('kpiTotal').textContent           = fmt(total);
-  document.getElementById('kpiTotalSub').textContent        = `${pagan} equipos han pagado`;
-  document.getElementById('kpiEquipos').textContent         = data.length;
-  document.getElementById('kpiEquiposSub').textContent      = `${pagan} pagaron · ${noPagan} pendientes`;
-  document.getElementById('kpiEfectivo').textContent        = fmt(efectivo);
-  document.getElementById('kpiEfectivoPct').textContent     = `${pct(efectivo,total)}% del total`;
-  document.getElementById('kpiTransferencia').textContent   = fmt(transferencia);
-  document.getElementById('kpiTransferenciaPct').textContent= `${pct(transferencia,total)}% del total`;
+  document.getElementById('kpiTotal').textContent            = fmt(total);
+  document.getElementById('kpiTotalSub').textContent         = `${pagan} equipos han pagado`;
+  document.getElementById('kpiEquipos').textContent          = data.length;
+  document.getElementById('kpiEquiposSub').textContent       = `${pagan} pagaron · ${noPagan} pendientes`;
+  document.getElementById('kpiEfectivo').textContent         = fmt(efectivo);
+  document.getElementById('kpiEfectivoPct').textContent      = `${pct(efectivo,total)}% del total`;
+  document.getElementById('kpiTransferencia').textContent    = fmt(transferencia);
+  document.getElementById('kpiTransferenciaPct').textContent = `${pct(transferencia,total)}% del total`;
 }
 
-// ── SEDE CHART ────────────────────────────────────
-function updateSedeChart(data) {
+// ── CALCULAR DATOS PARA GRÁFICOS ──────────────────
+function calcSedeData(data) {
   const map = {};
   data.forEach(r => { if(r.sede) map[r.sede] = (map[r.sede]||0) + r.total; });
   const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
-  const labels  = entries.map(([s]) => s.replace(/ F[78].*/,''));
-  const values  = entries.map(([,v]) => v);
-  destroyChart('sede');
-  charts.sede = new Chart(document.getElementById('chartSede'), {
-    type:'bar',
-    data:{ labels, datasets:[{ data:values,
-      backgroundColor: values.map((_,i)=> i===0 ? '#00e676' : 'rgba(68,138,255,0.55)'),
-      borderRadius:5, borderSkipped:false }] },
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} },
-      scales:{
-        x:{ grid:{color:'#1f2d42'}, ticks:{callback: v=>'$'+(v/1000000).toFixed(1)+'M'} },
-        y:{ grid:{display:false}, ticks:{font:{size:10}} }
-      }
-    }
-  });
+  return {
+    labels: entries.map(([s]) => s.replace(/ F[78].*/,'')),
+    values: entries.map(([,v]) => v)
+  };
 }
 
-// ── MÉTODO CHART ──────────────────────────────────
-function updateMetodoChart(data) {
+function calcMetodoData(data) {
   const map = { EFECTIVO:0, TRANSFERENCIA:0, MIXTO:0 };
   data.forEach(r => { if(map[r.metodo]!==undefined) map[r.metodo]+=r.total; });
-  const total = Object.values(map).reduce((a,b)=>a+b,0);
-  const colors = { EFECTIVO:'#ffd740', TRANSFERENCIA:'#448aff', MIXTO:'#ce93d8' };
-  const icons  = { EFECTIVO:'💵', TRANSFERENCIA:'🔄', MIXTO:'🔀' };
-
-  const ml = document.getElementById('methodList');
-  ml.innerHTML = '';
-  Object.entries(map).sort((a,b)=>b[1]-a[1]).forEach(([name,val])=>{
-    const p = pct(val,total);
-    ml.innerHTML += `<div>
-      <div class="method-header">
-        <span class="method-name" style="color:${colors[name]}">${icons[name]} ${name}</span>
-        <span class="method-pct">${fmt(val)} · ${p}%</span>
-      </div>
-      <div class="method-bar-bg">
-        <div class="method-bar-fill" style="background:${colors[name]}" data-w="${p}"></div>
-      </div></div>`;
-  });
-  setTimeout(()=>{ document.querySelectorAll('.method-bar-fill').forEach(el=>el.style.width=el.dataset.w+'%'); },100);
-
-  destroyChart('metodo');
-  charts.metodo = new Chart(document.getElementById('chartMetodo'), {
-    type:'doughnut',
-    data:{ labels:['Efectivo','Transferencia','Mixto'],
-      datasets:[{ data:[map.EFECTIVO,map.TRANSFERENCIA,map.MIXTO],
-        backgroundColor:['#ffd740','#448aff','#ce93d8'], borderWidth:0, hoverOffset:6 }] },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{padding:10,font:{size:10}} },
-        tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}}
-      }, cutout:'65%'
-    }
-  });
+  return map;
 }
 
-// ── CONCEPTO CHART (NUEVA) ────────────────────────
-function updateConceptoChart(data) {
-  const conceptos = [
-    { key:'inscripcion', label:'Inscripción', color:'#00e676' },
-    { key:'conFecha',    label:'Con. Fecha',  color:'#448aff' },
-    { key:'tarjetas',    label:'Tarjetas',    color:'#ffd740' },
-    { key:'wos',         label:'Wos',         color:'#ce93d8' },
-    { key:'otros',       label:'Otros',       color:'#ff5252' },
-  ];
-
+function calcConceptoData(data) {
+  const keys = ['inscripcion','conFecha','tarjetas','wos','otros'];
   const totals = {};
-  conceptos.forEach(c => {
-    totals[c.key] = data.reduce((s,r) => s+(r[c.key]||0), 0);
-  });
-  const maxVal = Math.max(...Object.values(totals), 1);
-
-  // Barras horizontales con valor
-  const cl = document.getElementById('conceptoList');
-  cl.innerHTML = '';
-  conceptos.forEach(c => {
-    const val = totals[c.key];
-    const w   = pct(val, maxVal);
-    cl.innerHTML += `
-      <div class="concepto-row">
-        <span class="concepto-name" style="color:${c.color}">${c.label}</span>
-        <div class="concepto-bar-bg">
-          <div class="concepto-bar-fill" style="background:${c.color}" data-w="${w}">
-            ${val>0?`<span class="concepto-bar-label">${fmt(val)}</span>`:''}
-          </div>
-        </div>
-      </div>`;
-  });
-  setTimeout(()=>{ document.querySelectorAll('.concepto-bar-fill').forEach(el=>el.style.width=el.dataset.w+'%'); },100);
-
-  // Doughnut de conceptos
-  destroyChart('concepto');
-  charts.concepto = new Chart(document.getElementById('chartConcepto'), {
-    type:'doughnut',
-    data:{
-      labels: conceptos.map(c=>c.label),
-      datasets:[{ data: conceptos.map(c=>totals[c.key]),
-        backgroundColor: conceptos.map(c=>c.color), borderWidth:0, hoverOffset:6 }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{padding:10,font:{size:10}} },
-        tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}}
-      }, cutout:'60%'
-    }
-  });
+  keys.forEach(k => { totals[k] = data.reduce((s,r) => s+(r[k]||0), 0); });
+  return totals;
 }
 
-// ── EFECTIVO vs TRANSFERENCIA ─────────────────────
-function updateEfTransChart(data) {
+function calcEfTransData(data) {
   const map = {};
   data.forEach(r => {
     if(!r.sede) return;
@@ -653,28 +591,159 @@ function updateEfTransChart(data) {
     map[r.sede].ef += r.efectivo;
     map[r.sede].tr += r.transferencia;
   });
-  const entries = Object.entries(map).sort((a,b)=>(b[1].ef+b[1].tr)-(a[1].ef+a[1].tr)).slice(0,8);
-  destroyChart('eftrans');
-  charts.eftrans = new Chart(document.getElementById('chartEfTrans'), {
+  return Object.entries(map).sort((a,b)=>(b[1].ef+b[1].tr)-(a[1].ef+a[1].tr)).slice(0,8);
+}
+
+// ── INIT CHARTS (primera carga) ───────────────────
+function initCharts(data) {
+  Chart.defaults.color = '#6b7a96';
+  Chart.defaults.font.family = 'Inter';
+
+  // Sede
+  const sede = calcSedeData(data);
+  charts.chartSede = new Chart(document.getElementById('chartSede'), {
     type:'bar',
-    data:{
-      labels: entries.map(([s])=>s.replace(/ F[78].*/,'')),
-      datasets:[
-        { label:'Efectivo',      data:entries.map(([,v])=>v.ef), backgroundColor:'#ffd740', borderRadius:4 },
-        { label:'Transferencia', data:entries.map(([,v])=>v.tr), backgroundColor:'#448aff', borderRadius:4 }
-      ]
-    },
+    data:{ labels: sede.labels, datasets:[{ data: sede.values,
+      backgroundColor: sede.values.map((_,i)=> i===0 ? '#00e676' : 'rgba(68,138,255,0.55)'),
+      borderRadius:5, borderSkipped:false }] },
     options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{padding:10,font:{size:10}} },
-        tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}}
-      },
+      indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} },
+      scales:{
+        x:{ grid:{color:'#1f2d42'}, ticks:{callback: v=>'$'+(v/1000000).toFixed(1)+'M'} },
+        y:{ grid:{display:false}, ticks:{font:{size:10}} }
+      }
+    }
+  });
+
+  // Método dona
+  const met = calcMetodoData(data);
+  charts.chartMetodo = new Chart(document.getElementById('chartMetodo'), {
+    type:'doughnut',
+    data:{ labels:['Efectivo','Transferencia','Mixto'],
+      datasets:[{ data:[met.EFECTIVO,met.TRANSFERENCIA,met.MIXTO],
+        backgroundColor:['#ffd740','#448aff','#ce93d8'], borderWidth:0, hoverOffset:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+      plugins:{ legend:{ position:'bottom', labels:{padding:10,font:{size:10}} },
+        tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} }, cutout:'65%' }
+  });
+  updateMethodBars(met);
+
+  // Concepto dona
+  const con = calcConceptoData(data);
+  charts.chartConcepto = new Chart(document.getElementById('chartConcepto'), {
+    type:'doughnut',
+    data:{ labels:['Inscripción','Con. Fecha','Tarjetas','Wos','Otros'],
+      datasets:[{ data:[con.inscripcion,con.conFecha,con.tarjetas,con.wos,con.otros],
+        backgroundColor:['#00e676','#448aff','#ffd740','#ce93d8','#ff5252'],
+        borderWidth:0, hoverOffset:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+      plugins:{ legend:{ position:'bottom', labels:{padding:10,font:{size:10}} },
+        tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} }, cutout:'60%' }
+  });
+  updateConceptoBars(con);
+
+  // Ef vs Trans
+  const et = calcEfTransData(data);
+  charts.chartEfTrans = new Chart(document.getElementById('chartEfTrans'), {
+    type:'bar',
+    data:{ labels: et.map(([s])=>s.replace(/ F[78].*/,'')),
+      datasets:[
+        { label:'Efectivo',      data:et.map(([,v])=>v.ef), backgroundColor:'#ffd740', borderRadius:4 },
+        { label:'Transferencia', data:et.map(([,v])=>v.tr), backgroundColor:'#448aff', borderRadius:4 }
+      ] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+      plugins:{ legend:{ position:'bottom', labels:{padding:10,font:{size:10}} },
+        tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} },
       scales:{
         x:{ grid:{display:false}, ticks:{font:{size:9}} },
         y:{ grid:{color:'#1f2d42'}, ticks:{callback: v=>'$'+(v/1000000).toFixed(1)+'M'} }
       }
     }
+  });
+}
+
+// ── ACTUALIZAR CHARTS SIN DESTRUIR ────────────────
+function updateChartData(data) {
+  // Sede
+  const sede = calcSedeData(data);
+  if (charts.chartSede) {
+    charts.chartSede.data.labels = sede.labels;
+    charts.chartSede.data.datasets[0].data = sede.values;
+    charts.chartSede.data.datasets[0].backgroundColor = sede.values.map((_,i)=> i===0 ? '#00e676' : 'rgba(68,138,255,0.55)');
+    charts.chartSede.update('active');
+  }
+
+  // Método
+  const met = calcMetodoData(data);
+  if (charts.chartMetodo) {
+    charts.chartMetodo.data.datasets[0].data = [met.EFECTIVO, met.TRANSFERENCIA, met.MIXTO];
+    charts.chartMetodo.update('active');
+  }
+  updateMethodBars(met);
+
+  // Concepto
+  const con = calcConceptoData(data);
+  if (charts.chartConcepto) {
+    charts.chartConcepto.data.datasets[0].data = [con.inscripcion,con.conFecha,con.tarjetas,con.wos,con.otros];
+    charts.chartConcepto.update('active');
+  }
+  updateConceptoBars(con);
+
+  // Ef vs Trans
+  const et = calcEfTransData(data);
+  if (charts.chartEfTrans) {
+    charts.chartEfTrans.data.labels = et.map(([s])=>s.replace(/ F[78].*/,''));
+    charts.chartEfTrans.data.datasets[0].data = et.map(([,v])=>v.ef);
+    charts.chartEfTrans.data.datasets[1].data = et.map(([,v])=>v.tr);
+    charts.chartEfTrans.update('active');
+  }
+}
+
+// ── BARRAS MÉTODO ─────────────────────────────────
+function updateMethodBars(met) {
+  const total = met.EFECTIVO + met.TRANSFERENCIA + met.MIXTO;
+  const colors = { EFECTIVO:'#ffd740', TRANSFERENCIA:'#448aff', MIXTO:'#ce93d8' };
+  const icons  = { EFECTIVO:'💵', TRANSFERENCIA:'🔄', MIXTO:'🔀' };
+  const ml = document.getElementById('methodList');
+  ml.innerHTML = '';
+  Object.entries(met).sort((a,b)=>b[1]-a[1]).forEach(([name,val])=>{
+    const p = pct(val,total);
+    ml.innerHTML += `<div>
+      <div class="method-header">
+        <span class="method-name" style="color:${colors[name]}">${icons[name]} ${name}</span>
+        <span class="method-pct">${fmt(val)} · ${p}%</span>
+      </div>
+      <div class="method-bar-bg">
+        <div class="method-bar-fill" style="background:${colors[name]};width:${p}%"></div>
+      </div></div>`;
+  });
+}
+
+// ── BARRAS CONCEPTO ───────────────────────────────
+function updateConceptoBars(con) {
+  const conceptos = [
+    { key:'inscripcion', label:'Inscripción', color:'#00e676' },
+    { key:'conFecha',    label:'Con. Fecha',  color:'#448aff' },
+    { key:'tarjetas',    label:'Tarjetas',    color:'#ffd740' },
+    { key:'wos',         label:'Wos',         color:'#ce93d8' },
+    { key:'otros',       label:'Otros',       color:'#ff5252' },
+  ];
+  const maxVal = Math.max(...Object.values(con), 1);
+  const cl = document.getElementById('conceptoList');
+  cl.innerHTML = '';
+  conceptos.forEach(c => {
+    const val = con[c.key];
+    const w   = pct(val, maxVal);
+    cl.innerHTML += `
+      <div class="concepto-row">
+        <span class="concepto-name" style="color:${c.color}">${c.label}</span>
+        <div class="concepto-bar-bg">
+          <div class="concepto-bar-fill" style="background:${c.color};width:${w}%">
+            ${val>0?`<span class="concepto-bar-label">${fmt(val)}</span>`:''}
+          </div>
+        </div>
+      </div>`;
   });
 }
 
@@ -711,11 +780,13 @@ function applyFilters() {
 
 function renderTable(data) {
   const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
+  // Usar fragment para no bloquear el DOM
+  const fragment = document.createDocumentFragment();
   document.getElementById('tableCount').textContent = `${data.length} registros`;
   const mc = { EFECTIVO:'efec', TRANSFERENCIA:'trans', MIXTO:'mixto' };
   data.forEach((r,i) => {
-    tbody.innerHTML += `<tr>
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
       <td style="color:var(--text-muted)">${i+1}</td>
       <td><strong>${r.equipo||'—'}</strong></td>
       <td style="color:var(--text-muted);font-size:10px">${r.capitan||'—'}</td>
@@ -727,12 +798,13 @@ function renderTable(data) {
       <td style="color:var(--purple)">${r.wos>0?fmt(r.wos):'—'}</td>
       <td style="color:var(--red)">${r.otros>0?fmt(r.otros):'—'}</td>
       <td>${r.metodo?`<span class="tag ${mc[r.metodo]||''}">${r.metodo}</span>`:'—'}</td>
-      <td><span class="tag ${r.estado==='Paga'?'paga':'no-paga'}">${r.estado==='Paga'?'✅ Paga':'❌ Pendiente'}</span></td>
-    </tr>`;
+      <td><span class="tag ${r.estado==='Paga'?'paga':'no-paga'}">${r.estado==='Paga'?'✅ Paga':'❌ Pendiente'}</span></td>`;
+    fragment.appendChild(tr);
   });
+  tbody.innerHTML = '';
+  tbody.appendChild(fragment);
 }
 
-// Init
 Chart.defaults.color = '#6b7a96';
 Chart.defaults.font.family = 'Inter';
 </script>
