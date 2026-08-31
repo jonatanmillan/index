@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
@@ -18,7 +18,7 @@
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-
+ 
   /* LOGIN */
   #loginScreen {
     position:fixed; inset:0; background:var(--bg);
@@ -49,7 +49,7 @@
     padding:8px; font-size:12px; text-align:center; display:none;
   }
   .login-footer { font-size:10px; color:var(--text-dim); text-align:center; }
-
+ 
   /* LOADING */
   #loadingScreen {
     position:fixed; inset:0; background:var(--bg); display:none;
@@ -61,10 +61,10 @@
   }
   @keyframes spin { to { transform:rotate(360deg); } }
   .loading-text { font-size:13px; color:var(--text-muted); }
-
+ 
   /* DASHBOARD */
   #dashboard { display:none; }
-
+ 
   /* HEADER */
   header {
     padding:18px 28px; border-bottom:1px solid var(--border);
@@ -84,7 +84,7 @@
     font-family:'Inter',sans-serif; transition:all 0.2s;
   }
   .logout-btn:hover { border-color:var(--red); color:var(--red); }
-
+ 
   /* FILTERS */
   .filters {
     padding:12px 28px; display:flex; gap:6px; flex-wrap:wrap;
@@ -97,10 +97,10 @@
     cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif;
   }
   .filter-btn:hover,.filter-btn.active { background:var(--green-dim); border-color:var(--green); color:var(--green); }
-
+ 
   /* MAIN */
   .main { padding:18px 28px; display:flex; flex-direction:column; gap:14px; }
-
+ 
   /* KPI */
   .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   .kpi-card {
@@ -117,7 +117,7 @@
   .kpi-value.green{color:var(--green)} .kpi-value.blue{color:var(--blue)}
   .kpi-value.yellow{color:var(--yellow)} .kpi-value.red{color:var(--red)}
   .kpi-sub { font-size:10px; color:var(--text-muted); margin-top:4px; }
-
+ 
   /* CHARTS */
   .charts-row { display:grid; gap:12px; }
   .r-2-1 { grid-template-columns:2fr 1fr; }
@@ -126,7 +126,7 @@
   .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
   .chart-title { font-size:13px; font-weight:700; margin-bottom:2px; }
   .chart-sub { font-size:11px; color:var(--text-muted); margin-bottom:12px; }
-
+ 
   /* METHOD BARS */
   .method-list { display:flex; flex-direction:column; gap:10px; }
   .method-header { display:flex; justify-content:space-between; margin-bottom:4px; }
@@ -134,7 +134,7 @@
   .method-pct { font-size:10px; color:var(--text-muted); }
   .method-bar-bg { background:var(--surface2); border-radius:4px; height:6px; }
   .method-bar-fill { height:6px; border-radius:4px; transition:width 1.2s ease; width:0; }
-
+ 
   /* CONCEPTO BARS */
   .concepto-list { display:flex; flex-direction:column; gap:10px; }
   .concepto-row { display:flex; align-items:center; gap:10px; }
@@ -143,7 +143,7 @@
   .concepto-bar-fill { height:18px; border-radius:4px; transition:width 1.2s ease; width:0; display:flex; align-items:center; padding:0 8px; }
   .concepto-bar-label { font-size:10px; font-weight:700; color:#000; white-space:nowrap; }
   .concepto-amount { font-size:11px; font-weight:700; width:80px; text-align:right; flex-shrink:0; }
-
+ 
   /* TEAM LIST */
   .team-list { display:flex; flex-direction:column; gap:5px; }
   .team-item {
@@ -155,7 +155,7 @@
   .team-rank.top { color:var(--yellow); }
   .team-name { font-size:11px; font-weight:500; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .team-amount { font-size:11px; font-weight:700; color:var(--green); }
-
+ 
   /* TABLE */
   .search-wrap { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center; }
   .search-input {
@@ -185,7 +185,7 @@
   .tag.efec{background:var(--yellow-dim);color:var(--yellow)}
   .tag.trans{background:var(--blue-dim);color:var(--blue)}
   .tag.mixto{background:var(--purple-dim);color:var(--purple)}
-
+ 
   .error-banner {
     background:var(--red-dim); border:1px solid var(--red); border-radius:8px;
     padding:10px 14px; font-size:12px; color:var(--red); display:none; margin-bottom:8px;
@@ -193,7 +193,7 @@
 </style>
 </head>
 <body>
-
+ 
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
@@ -211,13 +211,13 @@
     <div class="login-footer">🔒 Acceso restringido · Solo personal autorizado</div>
   </div>
 </div>
-
+ 
 <!-- LOADING -->
 <div id="loadingScreen">
   <div class="spinner"></div>
   <div class="loading-text">Cargando datos desde Google Sheets...</div>
 </div>
-
+ 
 <!-- DASHBOARD -->
 <div id="dashboard">
   <header>
@@ -236,7 +236,7 @@
       <button class="logout-btn" onclick="doLogout()">🔒 Cerrar sesión</button>
     </div>
   </header>
-
+ 
   <div class="filters">
     <span class="filter-label">CIUDAD:</span>
     <button class="filter-btn active" onclick="filterCiudad('all',this)">Todas</button>
@@ -247,10 +247,10 @@
     <button class="filter-btn active" id="btnTodasSedes" onclick="filterSede('all',this)">Todas</button>
     <div id="sedeFilters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   </div>
-
+ 
   <div class="main">
     <div class="error-banner" id="errorBanner"></div>
-
+ 
     <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card green">
@@ -278,7 +278,7 @@
         <div class="kpi-sub" id="kpiTransferenciaPct">Cargando...</div>
       </div>
     </div>
-
+ 
     <!-- Fila 1: Sede + Método -->
     <div class="charts-row r-2-1">
       <div class="chart-card">
@@ -293,7 +293,7 @@
         <div style="position:relative;height:110px;margin-top:14px"><canvas id="chartMetodo"></canvas></div>
       </div>
     </div>
-
+ 
     <!-- Fila 2: Concepto de Pago (NUEVA) + Ef vs Trans -->
     <div class="charts-row r-1-1">
       <div class="chart-card">
@@ -308,14 +308,14 @@
         <div style="position:relative;height:240px"><canvas id="chartEfTrans"></canvas></div>
       </div>
     </div>
-
+ 
     <!-- Fila 3: Top equipos -->
     <div class="chart-card">
       <div class="chart-title">🏆 Top 10 Equipos por Recaudo</div>
       <div class="chart-sub">Equipos que más han aportado en la edición</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="teamList"></div>
     </div>
-
+ 
     <!-- Tabla -->
     <div class="chart-card">
       <div class="chart-title">📋 Registro de Equipos</div>
@@ -352,7 +352,7 @@
     </div>
   </div>
 </div>
-
+ 
 <script>
 // ════════════════════════════════════════════════
 // CONFIGURACIÓN — solo cambia estas 2 líneas
@@ -364,12 +364,12 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzNiMjd9uhGw8E5FMVFXYlp7wmXx3W5Q8AVN6CO77OhaQIE_pLuOmg2C-yR4o9AUwTMw/exec";
 // ════════════════════════════════════════════════
 // ════════════════════════════════════════════════
-
+ 
 let allData = [];
 let currentSede = 'all';
 let currentCiudad = 'all';
 let charts = {};
-
+ 
 // ── LOGIN ────────────────────────────────────────
 function doLogin() {
   const val = document.getElementById('passInput').value.trim();
@@ -390,7 +390,7 @@ function doLogout() {
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('passInput').value = '';
 }
-
+ 
 // ── LOAD CSV ─────────────────────────────────────
 function loadData(password) {
   // Envía la clave al Apps Script — él decide si es correcta
@@ -411,7 +411,7 @@ function loadData(password) {
         return;
       }
       if (json.error) throw new Error(json.error + ': ' + (json.msg||''));
-
+ 
       allData = json.data;
       document.getElementById('loadingScreen').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
@@ -426,7 +426,7 @@ function loadData(password) {
       b.textContent = '⚠️ No se pudo conectar al Apps Script: ' + err.message + '. Verifica tu conexión.';
     });
 }
-
+ 
 // ── PARSE CSV ────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -437,9 +437,9 @@ function parseCSV(text) {
     if (cols.length < 5) continue;
     const o = {};
     headers.forEach((h, idx) => o[h] = (cols[idx]||'').replace(/"/g,'').trim());
-
+ 
     const num = k => parseFloat((o[k]||'0').replace(/[^0-9.-]/g,'')) || 0;
-
+ 
     // Mapeo flexible de columnas
     const find = (...keys) => {
       for (const k of keys) {
@@ -448,7 +448,7 @@ function parseCSV(text) {
       }
       return 0;
     };
-
+ 
     const row = {
       sede:           (o['SEDE']||'').trim(),
       equipo:         (o['EQUIPO']||'').trim(),
@@ -475,7 +475,7 @@ function parseCSV(text) {
   }
   return rows;
 }
-
+ 
 function splitCSV(line) {
   const r = []; let cur = ''; let inQ = false;
   for (const c of line) {
@@ -486,7 +486,7 @@ function splitCSV(line) {
   r.push(cur);
   return r;
 }
-
+ 
 // ── SEDE FILTERS ──────────────────────────────────
 function buildFilters() {
   // Ciudades
@@ -500,11 +500,11 @@ function buildFilters() {
     btn.onclick = () => filterCiudad(ciudad, btn);
     cc.appendChild(btn);
   });
-
+ 
   // Sedes (todas al inicio)
   buildSedeFilters(allData);
 }
-
+ 
 function buildSedeFilters(data) {
   const sedes = [...new Set(data.map(r => r.sede).filter(Boolean))].sort();
   const container = document.getElementById('sedeFilters');
@@ -520,7 +520,7 @@ function buildSedeFilters(data) {
     container.appendChild(btn);
   });
 }
-
+ 
 function filterCiudad(ciudad, btn) {
   currentCiudad = ciudad;
   currentSede = 'all';
@@ -536,7 +536,7 @@ function filterCiudad(ciudad, btn) {
     applyFilters();
   });
 }
-
+ 
 function filterSede(sede, btn) {
   currentSede = sede;
   // Solo desactiva botones de sede
@@ -552,11 +552,11 @@ function filterSede(sede, btn) {
     applyFilters();
   });
 }
-
+ 
 // ── HELPERS ───────────────────────────────────────
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
 const pct = (a,b) => b > 0 ? Math.round(a/b*100) : 0;
-
+ 
 // Crea un chart solo si no existe — si existe solo actualiza datos
 function getOrCreateChart(id, config) {
   if (charts[id]) {
@@ -575,7 +575,7 @@ function getOrCreateChart(id, config) {
   charts[id] = new Chart(document.getElementById(id), config);
   return charts[id];
 }
-
+ 
 // ── RENDER ALL (primera carga) ────────────────────
 function renderAll(data) {
   updateKPIs(data);
@@ -583,7 +583,7 @@ function renderAll(data) {
   updateTopTeams(data);
   applyFilters();
 }
-
+ 
 // ── KPIs ──────────────────────────────────────────
 function updateKPIs(data) {
   const total         = data.reduce((s,r) => s+r.total, 0);
@@ -591,7 +591,7 @@ function updateKPIs(data) {
   const transferencia = data.reduce((s,r) => s+r.transferencia, 0);
   const pagan         = data.filter(r => r.estado === 'Paga').length;
   const noPagan       = data.filter(r => r.estado === 'No paga').length;
-
+ 
   document.getElementById('kpiTotal').textContent            = fmt(total);
   document.getElementById('kpiTotalSub').textContent         = `${pagan} equipos han pagado`;
   document.getElementById('kpiEquipos').textContent          = data.length;
@@ -601,7 +601,7 @@ function updateKPIs(data) {
   document.getElementById('kpiTransferencia').textContent    = fmt(transferencia);
   document.getElementById('kpiTransferenciaPct').textContent = `${pct(transferencia,total)}% del total`;
 }
-
+ 
 // ── CALCULAR DATOS PARA GRÁFICOS ──────────────────
 function calcSedeData(data) {
   const map = {};
@@ -612,20 +612,20 @@ function calcSedeData(data) {
     values: entries.map(([,v]) => v)
   };
 }
-
+ 
 function calcMetodoData(data) {
   const map = { EFECTIVO:0, TRANSFERENCIA:0, MIXTO:0 };
   data.forEach(r => { if(map[r.metodo]!==undefined) map[r.metodo]+=r.total; });
   return map;
 }
-
+ 
 function calcConceptoData(data) {
   const keys = ['inscripcion','conFecha','tarjetas','wos','otros'];
   const totals = {};
   keys.forEach(k => { totals[k] = data.reduce((s,r) => s+(r[k]||0), 0); });
   return totals;
 }
-
+ 
 function calcEfTransData(data) {
   const map = {};
   data.forEach(r => {
@@ -636,12 +636,12 @@ function calcEfTransData(data) {
   });
   return Object.entries(map).sort((a,b)=>(b[1].ef+b[1].tr)-(a[1].ef+a[1].tr)).slice(0,8);
 }
-
+ 
 // ── INIT CHARTS (primera carga) ───────────────────
 function initCharts(data) {
   Chart.defaults.color = '#6b7a96';
   Chart.defaults.font.family = 'Inter';
-
+ 
   // Sede
   const sede = calcSedeData(data);
   charts.chartSede = new Chart(document.getElementById('chartSede'), {
@@ -658,7 +658,7 @@ function initCharts(data) {
       }
     }
   });
-
+ 
   // Método dona
   const met = calcMetodoData(data);
   charts.chartMetodo = new Chart(document.getElementById('chartMetodo'), {
@@ -671,7 +671,7 @@ function initCharts(data) {
         tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} }, cutout:'65%' }
   });
   updateMethodBars(met);
-
+ 
   // Concepto dona
   const con = calcConceptoData(data);
   charts.chartConcepto = new Chart(document.getElementById('chartConcepto'), {
@@ -685,7 +685,7 @@ function initCharts(data) {
         tooltip:{callbacks:{label: c=>' '+fmt(c.raw)}} }, cutout:'60%' }
   });
   updateConceptoBars(con);
-
+ 
   // Ef vs Trans
   const et = calcEfTransData(data);
   charts.chartEfTrans = new Chart(document.getElementById('chartEfTrans'), {
@@ -705,7 +705,7 @@ function initCharts(data) {
     }
   });
 }
-
+ 
 // ── ACTUALIZAR CHARTS SIN DESTRUIR ────────────────
 function updateChartData(data) {
   // Sede
@@ -716,7 +716,7 @@ function updateChartData(data) {
     charts.chartSede.data.datasets[0].backgroundColor = sede.values.map((_,i)=> i===0 ? '#00e676' : 'rgba(68,138,255,0.55)');
     charts.chartSede.update('active');
   }
-
+ 
   // Método
   const met = calcMetodoData(data);
   if (charts.chartMetodo) {
@@ -724,7 +724,7 @@ function updateChartData(data) {
     charts.chartMetodo.update('active');
   }
   updateMethodBars(met);
-
+ 
   // Concepto
   const con = calcConceptoData(data);
   if (charts.chartConcepto) {
@@ -732,7 +732,7 @@ function updateChartData(data) {
     charts.chartConcepto.update('active');
   }
   updateConceptoBars(con);
-
+ 
   // Ef vs Trans
   const et = calcEfTransData(data);
   if (charts.chartEfTrans) {
@@ -742,7 +742,7 @@ function updateChartData(data) {
     charts.chartEfTrans.update('active');
   }
 }
-
+ 
 // ── BARRAS MÉTODO ─────────────────────────────────
 function updateMethodBars(met) {
   const total = met.EFECTIVO + met.TRANSFERENCIA + met.MIXTO;
@@ -762,7 +762,7 @@ function updateMethodBars(met) {
       </div></div>`;
   });
 }
-
+ 
 // ── BARRAS CONCEPTO ───────────────────────────────
 function updateConceptoBars(con) {
   const conceptos = [
@@ -789,7 +789,7 @@ function updateConceptoBars(con) {
       </div>`;
   });
 }
-
+ 
 // ── TOP TEAMS ─────────────────────────────────────
 function updateTopTeams(data) {
   const sorted = [...data].filter(r=>r.total>0).sort((a,b)=>b.total-a.total).slice(0,10);
@@ -805,25 +805,25 @@ function updateTopTeams(data) {
       </div>`;
   });
 }
-
+ 
 // ── TABLE CON DEBOUNCE ────────────────────────────
 let searchTimer = null;
-
+ 
 function applyFilters() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(_doFilter, 250);
 }
-
+ 
 function _doFilter() {
   const search = (document.getElementById('searchInput').value||'').toLowerCase();
   const status = document.getElementById('statusFilter').value;
   const metodo = document.getElementById('metodoFilter').value;
-
+ 
   // Respeta ciudad → sede → búsqueda
   let base = allData;
   if (currentCiudad !== 'all') base = base.filter(r => r.ciudad === currentCiudad);
   if (currentSede   !== 'all') base = base.filter(r => r.sede   === currentSede);
-
+ 
   const filtered = base.filter(r => {
     const ms = !search || r.equipo.toLowerCase().includes(search) || r.capitan.toLowerCase().includes(search);
     const me = status === 'all' || r.estado === status;
@@ -832,7 +832,7 @@ function _doFilter() {
   });
   renderTable(filtered);
 }
-
+ 
 function renderTable(data) {
   const tbody = document.getElementById('tableBody');
   const mc    = { EFECTIVO:'efec', TRANSFERENCIA:'trans', MIXTO:'mixto' };
@@ -858,9 +858,10 @@ function renderTable(data) {
   tbody.innerHTML = '';
   tbody.appendChild(fragment);
 }
-
+ 
 Chart.defaults.color = '#6b7a96';
 Chart.defaults.font.family = 'Inter';
 </script>
 </body>
 </html>
+ 
